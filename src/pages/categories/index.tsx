@@ -41,6 +41,17 @@ const CategoriesPage: NextPageWithLayout = () => {
     resolver: zodResolver(categoryFormSchema),
   });
 
+  // 1. Fields mirip, condition beda
+  // CreateForm
+  // name: string, min 3, wajib diisi
+  // price: number, min 1000, wajib diisi
+
+  // EditForm
+  // name: string, optional
+  // price: number, optional
+
+  // 2. Atur form values secara independent (create dan edit)
+
   const editCategoryForm = useForm<CategoryFormSchema>({
     resolver: zodResolver(categoryFormSchema),
   });
@@ -139,12 +150,14 @@ const CategoriesPage: NextPageWithLayout = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Add New Category</AlertDialogTitle>
               </AlertDialogHeader>
-              <Form {...createCategoryForm}>
+
+              {/* <Form {...createCategoryForm}> */}
                 <CategoryForm
                   onSubmit={handleSubmitCreateCategory}
                   submitText="Create Category"
+                  form={createCategoryForm}
                 />
-              </Form>
+              {/* </Form> */}
 
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -188,12 +201,14 @@ const CategoriesPage: NextPageWithLayout = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Edit Category</AlertDialogTitle>
           </AlertDialogHeader>
-          <Form {...editCategoryForm}>
+
+          {/* <Form {...editCategoryForm}> */}
             <CategoryForm
               onSubmit={handleSubmitEditCategory}
               submitText="Edit Category"
+              form={editCategoryForm}
             />
-          </Form>
+          {/* </Form> */}
 
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
