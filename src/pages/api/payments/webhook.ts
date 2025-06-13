@@ -15,6 +15,15 @@ type XenditWebhookBody = {
 const handler: NextApiHandler = async (req, res) => {
   if (req.method !== "POST") return;
 
+  // Verify webhook berasal dari Xendit
+  const headers = req.headers;
+
+  const webhookToken = headers["x-callback-token"];
+
+  if (webhookToken !== process.env.XENDIT_WEBHOOK_TOKEN) {
+    return res.status(401);
+  }
+
   const body = req.body as XenditWebhookBody;
 
   // 1. find order

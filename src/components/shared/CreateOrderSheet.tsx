@@ -24,6 +24,7 @@ import { PaymentQRCode } from "./PaymentQrCode";
 import { useCartStore } from "@/store/cart";
 import { OrderCard } from "../OrderCard";
 import { api } from "@/utils/api";
+import { toast } from "sonner";
 
 type OrderItemProps = {
   id: string;
@@ -87,7 +88,6 @@ export const CreateOrderSheet = ({
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentInfoLoading, setPaymentInfoLoading] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const subtotal = cartStore.items.reduce((a, b) => {
     return a + b.price * b.quantity;
@@ -98,11 +98,31 @@ export const CreateOrderSheet = ({
   const { mutate: createOrder, data: createOrderResponse } =
     api.order.createOrder.useMutation({
       onSuccess: () => {
-        alert("Created order");
+        toast("Created order");
 
         setPaymentDialogOpen(true);
       },
     });
+
+  const { mutate: simulatePayment } = api.order.simulatePayment.useMutation({
+    onSuccess: () => {
+      toast("Simulated payment");
+    },
+  });
+
+  const {
+    mutate: checkOrderPaymentStatus,
+    data: orderPaid,
+    isPending: checkOrderPaymentStatusIsPending,
+    reset: resetCheckOrderPaymentStatus,
+  } = api.order.checkOrderPaymentStatus.useMutation({
+    onSuccess: (orderPaid) => {
+      if (orderPaid) {
+        cartStore.clearCart();
+        return;
+      }
+    },
+  });
 
   const handleCreateOrder = () => {
     createOrder({
@@ -113,17 +133,28 @@ export const CreateOrderSheet = ({
         };
       }),
     });
-
-    // setPaymentDialogOpen(true);
-    // setPaymentInfoLoading(true);
-
-    // setTimeout(() => {
-    //   setPaymentInfoLoading(false);
-    // }, 3000);
   };
 
   const handleRefresh = () => {
-    setPaymentSuccess(true);
+    if (!createOrderResponse) return;
+
+    checkOrderPaymentStatus({
+      orderId: createOrderResponse?.order.id,
+    });
+  };
+
+  const handleSimulatePayment = () => {
+    if (!createOrderResponse) return;
+
+    simulatePayment({
+      orderId: createOrderResponse?.order.id,
+    });
+  };
+
+  const handleClosePaymentDialog = () => {
+    setPaymentDialogOpen(false);
+    onOpenChange(false);
+    resetCheckOrderPaymentStatus();
   };
 
   return (
@@ -196,11 +227,19 @@ export const CreateOrderSheet = ({
               </div>
             ) : (
               <>
-                <Button variant="link" onClick={handleRefresh}>
-                  Refresh
-                </Button>
+                {!orderPaid && (
+                  <Button
+                    variant="link"
+                    onClick={handleRefresh}
+                    disabled={checkOrderPaymentStatusIsPending}
+                  >
+                    {checkOrderPaymentStatusIsPending
+                      ? "Refreshing..."
+                      : "Refresh"}
+                  </Button>
+                )}
 
-                {!paymentSuccess ? (
+                {!orderPaid ? (
                   <PaymentQRCode
                     qrString={createOrderResponse?.qrString ?? ""}
                   />
@@ -215,20 +254,25 @@ export const CreateOrderSheet = ({
                 <p className="text-muted-foreground text-sm">
                   Transaction ID: {createOrderResponse?.order.id}
                 </p>
+
+                {!orderPaid && (
+                  <Button onClick={handleSimulatePayment} variant="link">
+                    Simulate Payment
+                  </Button>
+                )}
               </>
             )}
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel asChild>
-              <Button
-                disabled={paymentInfoLoading}
-                variant="outline"
-                className="w-full"
-              >
-                Done
-              </Button>
-            </AlertDialogCancel>
+            <Button
+              disabled={paymentInfoLoading}
+              variant="outline"
+              className="w-full"
+              onClick={handleClosePaymentDialog}
+            >
+              Done
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

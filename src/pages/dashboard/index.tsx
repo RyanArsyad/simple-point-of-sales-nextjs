@@ -9,13 +9,13 @@ import { CreateOrderSheet } from "@/components/shared/CreateOrderSheet";
 import { ProductMenuCard } from "@/components/shared/product/ProductMenuCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORIES } from "@/data/mock";
+import { useCartStore } from "@/store/cart";
 import { api } from "@/utils/api";
 import { Search, ShoppingCart } from "lucide-react";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import type { NextPageWithLayout } from "../_app";
-import { useCartStore } from "@/store/cart";
+import { toast } from "sonner";
 
 const DashboardPage: NextPageWithLayout = () => {
   const cartStore = useCartStore();
@@ -24,7 +24,15 @@ const DashboardPage: NextPageWithLayout = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [orderSheetOpen, setOrderSheetOpen] = useState(false);
 
-  const { data: products } = api.product.getProducts.useQuery();
+  const { data: products } = api.product.getProducts.useQuery({
+    categoryId: selectedCategory,
+  });
+
+  const { data: categories } = api.category.getCategories.useQuery();
+
+  const totalProducts = categories?.reduce((a, b) => {
+    return a + b._count.products;
+  }, 0);
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -34,7 +42,7 @@ const DashboardPage: NextPageWithLayout = () => {
     const productToAdd = products?.find((product) => product.id === productId);
 
     if (!productToAdd) {
-      alert("Product not found");
+      toast("Product not found");
       return;
     }
 
@@ -70,6 +78,7 @@ const DashboardPage: NextPageWithLayout = () => {
 
       <div className="space-y-6">
         <div className="relative">
+          {/* Gunakan debouncing/throttling */}
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Search products..."
@@ -80,15 +89,25 @@ const DashboardPage: NextPageWithLayout = () => {
         </div>
 
         <div className="flex space-x-4 overflow-x-auto pb-2">
-          {CATEGORIES.map((category) => (
-            <CategoryFilterCard
-              key={category.id}
-              name={category.name}
-              productCount={category.count}
-              isSelected={selectedCategory === category.id}
-              onClick={() => handleCategoryClick(category.id)}
-            />
-          ))}
+          <CategoryFilterCard
+            key="all"
+            name="All"
+            isSelected={selectedCategory === "all"}
+            onClick={() => handleCategoryClick("all")}
+            productCount={totalProducts ?? 0}
+          />
+
+          {categories?.map((category) => {
+            return (
+              <CategoryFilterCard
+                key={category.id}
+                name={category.name}
+                isSelected={category.id === selectedCategory}
+                onClick={() => handleCategoryClick(category.id)}
+                productCount={category._count.products}
+              />
+            );
+          })}
         </div>
 
         <div>
